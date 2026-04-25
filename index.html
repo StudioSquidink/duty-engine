@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Duty Engine</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Special+Elite&display=swap');
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        background-color: #1a1a1a;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        font-family: 'Special Elite', monospace;
+    }
+
+    #device-wrapper {
+        position: relative;
+        width: 429px;
+        height: 599px;
+    }
+
+    #device {
+        background-color: #2a2a2a;
+        border: none;
+        border-radius: 12px;
+        width: 340px;
+        height: 449px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        overflow: hidden;
+        position: absolute;
+        top: 116px;
+        left: 46px;
+        z-index: 1;
+    }
+
+    #device-frame {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 429px;
+        height: 599px;
+        pointer-events: none;
+        z-index: 2;
+    }
+
+    #decorative-top {
+        display: none;
+    }
+
+    #cycle-buttons {
+        display: flex;
+        gap: 8px;
+    }
+
+    #cycle-buttons button {
+    flex: 1;
+    padding: 8px;
+    background-color: #1a1a1a;
+    color: #7AAEA5;
+    border: 2px solid #7AAEA5;
+    border-radius: 6px;
+    font-family: 'Special Elite', monospace;
+    font-size: 0.75rem;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    font-weight: bold;
+}
+
+    #cycle-buttons button.active {
+        background-color: #7AAEA5;
+        color: #1a1a1a;
+    }
+
+    #phase-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border: 2px solid #7AAEA5;
+        border-radius: 6px;
+        padding: 6px 8px;
+    }
+
+    #phase-bar button {
+        background: none;
+        border: none;
+        color: #D27CC7;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: opacity 0.2s;
+    }
+
+    #phase-bar button:disabled {
+        opacity: 0.2;
+        cursor: default;
+    }
+
+    #phase-name {
+        color: #7AAEA5;
+        font-size: 0.85rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    #detail-screen {
+        background-color: #111;
+        border: 2px solid #7AAEA5;
+        border-radius: 6px;
+        padding: 16px;
+        height: 320px;
+        overflow-y: scroll;
+    }
+
+    #phase-detail {
+        color: #7AAEA5;
+        font-size: 0.8rem;
+        line-height: 1.6;
+    }
+
+    #phase-detail ol {
+        padding-left: 1.2em;
+    }
+
+    #phase-detail ul {
+        padding-left: 1.2em;
+        list-style-type: disc;
+    }
+
+    #phase-detail li {
+        margin-bottom: 0.4em;
+    }
+
+    #phase-detail u {
+        text-decoration: underline;
+    }
+</style>
+</head>
+<body>
+
+    <div id="device-wrapper">
+        <div id="device">
+
+            <div id="decorative-top"></div>
+
+            <div id="cycle-buttons">
+                <button id="btn-regular">Regular Cycle</button>
+                <button id="btn-eighth">8th Day</button>
+            </div>
+
+            <div id="phase-bar">
+                <button id="btn-back">◀</button>
+                <span id="phase-name">Phase Name</span>
+                <button id="btn-next">▶</button>
+            </div>
+
+            <div id="detail-screen">
+                <p id="phase-detail"></p>
+            </div>
+
+        </div>
+        <img id="device-frame" src="de.png" alt="">
+    </div>
+
+<script>
+    const phases = {
+        regular: [
+            {
+                name: "Phase 1: Morning",
+                detail: `
+                    <ol>
+                        <li>Note the day number and your Beacon's current Integrity (starts at 5, out of 5).</li>
+                        <li>Spend your <u>6 Activity Points (AP)</u> on tasks. You can choose any mix of:
+                            <ul>
+                                <li>Nutrition (1 AP) → gain Well-Fed (+1 FORT checks for 2 days)</li>
+                                <li>Ritual/Hobby (2 AP) → gain Grounded (+1 DISP checks for 2 days)</li>
+                                <li>Study/Beacon Maintenance (3 AP) → gain Prepared (+1 KNOW checks) or restore 1 Integrity</li>
+                            </ul>
+                            Record which Conditions you gained and when they expire in your log (2 days later).
+                        </li>
+                        <li>Roll 1d6 for the Morning Event:
+                            <ul>
+                                <li>1: +2 AP</li>
+                                <li>2: +1 AP</li>
+                                <li>3‑4: lose 1 AP or take –1 to one stat for the day</li>
+                                <li>5: lose 2 AP</li>
+                                <li>6: lose 3 AP and –1 Integrity (until you next do maintenance)</li>
+                            </ul>
+                        </li>
+                        <li>Note how many AP you have left for the Dusk phase.</li>
+                        <li>Make a note in your log about your event results.</li>
+                    </ol>
+                `
+            },
+            {
+                name: "Phase 2: Noon",
+                detail: `
+                    <ol>
+                        <li>Check your Beacon's Intel Source to see how many Forecast cards you can draw (0–3). The rest will be Hidden cards (total 4 events each night).</li>
+                        <li>Draw that many cards from the deck and place them face up. These are your Forecast cards.
+                            <ul>
+                                <li>Suit tells you the type: ♥ Travellers, ♦ Opportunity, ♣ Physical threat, ♠ Psychic threat.</li>
+                                <li>Value (Ace=14, K=13, Q=12, J=11, 10‑2 as printed) tells you the intensity/difficulty.</li>
+                                <li>The remaining cards (4 minus Forecast cards) stay in the deck as Hidden cards.</li>
+                            </ul>
+                        </li>
+                        <li>Make a note in your log about the forecast.</li>
+                    </ol>
+                `
+            },
+            {
+                name: "Phase 3: Dusk",
+                detail: `
+                    <ol>
+                        <li>Take the AP you saved from Morning and spend them on any of these preparations:
+                            <ul>
+                                <li>Fortify (1 AP) → +1 against physical threats tonight</li>
+                                <li>Study (1 AP per Forecast card) → +1 against that specific card tonight</li>
+                                <li>Meditate (2 AP) → restore one exhausted Condition</li>
+                                <li>Emergency Repairs (2 AP) → restore 1 Integrity (if damaged)</li>
+                                <li>Rest (2 AP) → bank 1 extra AP for tomorrow morning</li>
+                            </ul>
+                            Any AP you don't spend is lost – only Rest lets you carry AP forward.
+                        </li>
+                        <li>Make a log note about your preparations, frequency choices (time, sound, colour), and how you feel.</li>
+                    </ol>
+                `
+            },
+            {
+                name: "Phase 4: The Watch",
+                detail: `
+                    <ol>
+                        <li>Take the Hidden cards and add them to your Forecast cards. You should have exactly 4 cards total.</li>
+                        <li>Shuffle them together and place them face down – this is your Night Deck.</li>
+                        <li>Flip the first card and resolve it before moving to the next. Do this for all four cards in order.
+                            <br><br>
+                            <u>If the card is a DIAMOND (♦) – Opportunity:</u><br>
+                            Choose a small resource or insight linked to the card value. A card of 10 or higher may be a Tribute — invent a strange object and add it to your Cabinet.
+                            <br><br>
+                            <u>If the card is HEART (♥), CLUB (♣), or SPADE (♠) – Threat:</u>
+                            <ul>
+                                <li>a) Threat total = Card value + 2d6</li>
+                                <li>b) Your total = Relevant stat (♥=DISP, ♣=FORT, ♠=FORT) + 2d6 + active Conditions + Beacon Resource bonus</li>
+                                <li>c) Compare totals:
+                                    <ul>
+                                        <li>Your total ≥ Threat +3 → Full Success – Threat neutralized, plus an advantage</li>
+                                        <li>Your total ≥ Threat → Success – Threat neutralized, no extra cost</li>
+                                        <li>Your total ≥ Threat –3 → Partial Success – Threat neutralized, lose 1 Integrity or one Condition</li>
+                                        <li>Your total &lt; Threat –3 → Failure – Lose 2 Integrity and gain a negative Condition</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                        <li>Record the outcome in your log. If you earn a Tribute, invent it on the spot and add it to your Cabinet.</li>
+                    </ol>
+                `
+            },
+            {
+                name: "Phase 5: First Light",
+                detail: `
+                    <ol>
+                        <li>Integrity Check (only if Integrity ≤2):
+                            <ul>
+                                <li>Roll 2d6. If result ≤ your KNOWLEDGE stat → restore 1 Integrity.</li>
+                                <li>If higher → lose 1 additional Integrity (systems failing).</li>
+                            </ul>
+                        </li>
+                        <li>Supply Check (only when days since last supply equals your Beacon's Isolation number):
+                            <ul>
+                                <li>2‑6 → supplies lost. Resource unavailable until next supply run.</li>
+                                <li>7‑9 → partial. Supplies arrive but one resource type is delayed.</li>
+                                <li>10‑12 → full. Supplies arrive intact.</li>
+                            </ul>
+                        </li>
+                        <li>Legacy Points – award 1 for each:
+                            <ul>
+                                <li>You added a Tribute to your Cabinet.</li>
+                                <li>You achieved a Full Success during The Watch.</li>
+                            </ul>
+                        </li>
+                        <li>Write your full journal entry of the day.</li>
+                        <li>Return to Phase 1 – unless it's the 8th day, in which case follow the Octotag Cycle instead.</li>
+                    </ol>
+                `
+            }
+        ],
+        eighth: [
+            {
+                name: "Option A: Correspond",
+                detail: `
+                    <ol>
+                        <li>Choose a correspondent — an NPC Beaconer or another real player.</li>
+                        <li>Send an Energetic Missive (EM) — write a letter in character.</li>
+                        <li>Roll 1d6 for reception:
+                            <ul>
+                                <li>1-2: Negative → 0 EM points</li>
+                                <li>3-4: Neutral → 1 EM point</li>
+                                <li>5-6: Positive → 2 EM points</li>
+                            </ul>
+                            Note: EM points are not received until you also get a reply.
+                        </li>
+                        <li>Draw 1 card — suit tells you the subject of your message.</li>
+                        <li>Record EM points on your Identification Sheet. 6 EM points with the same Beaconer → +1 to one stat for the next 8 days, then reset to 0.</li>
+                        <li>Journal about the exchange.</li>
+                    </ol>
+                `
+            },
+            {
+                name: "Option B: Repair & Replenish",
+                detail: `
+                    <p>Choose based on your need:</p><br>
+                    <u>Restore Integrity (if Integrity is 2 or less):</u>
+                    <ul>
+                        <li>1-2 → regain 1 Integrity</li>
+                        <li>3-4 → regain 2 Integrity</li>
+                        <li>5-6 → regain 3 Integrity</li>
+                    </ul>
+                    <br>
+                    <u>Scavenge (if last supply run failed):</u>
+                    <ul>
+                        <li>1-2 → regain resource for 1 day</li>
+                        <li>3-4 → regain resource for 2 days</li>
+                        <li>5-6 → regain resource for 3 days</li>
+                    </ul>
+                    <br>
+                    <p>Journal about your day of rest — repairs, small pleasures, memories, letters received.</p>
+                `
+            },
+            {
+                name: "Option C: Explore a Mystery",
+                detail: `
+                    <u>First time exploring a new mystery:</u><br>
+                    Invent a trigger or roll 1d6:
+                    <ul>
+                        <li>1: Object left by your predecessor</li>
+                        <li>2: Message from The Long Watch</li>
+                        <li>3: A close colleague disappears</li>
+                        <li>4: Something about the Beacon has changed overnight</li>
+                        <li>5: A Tribute is singing in an unknown language</li>
+                        <li>6: A creature is nesting in the lamp room</li>
+                    </ul>
+                    Log the mystery — name, day started, trigger.<br><br>
+                    <u>Continuing a mystery:</u><br>
+                    Draw 1 card for a disruption:
+                    <ul>
+                        <li>♥ A traveller offers information or tries to dissuade you</li>
+                        <li>♦ An expert provides insight or a resource</li>
+                        <li>♣ A reality storm hampers physical interaction</li>
+                        <li>♠ Research causes confusion (lasts card value in days)</li>
+                    </ul>
+                    <br>
+                    <u>Resolving (after 3 disruptions):</u><br>
+                    Roll 2d6 vs KNOWLEDGE:
+                    <ul>
+                        <li>Success → mystery solved, +2 Legacy, receive a Tribute</li>
+                        <li>Failure → mystery deepens, draw another disruption</li>
+                    </ul>
+                    <br>
+                    <p>Journal about your 8th day.</p>
+                `
+            }
+        ]
+    };
+
+    let currentCycle = 'regular';
+    let currentPhase = 0;
+
+    const phaseNameEl = document.getElementById('phase-name');
+    const phaseDetailEl = document.getElementById('phase-detail');
+    const btnRegular = document.getElementById('btn-regular');
+    const btnEighth = document.getElementById('btn-eighth');
+    const btnBack = document.getElementById('btn-back');
+    const btnNext = document.getElementById('btn-next');
+
+    function updateDisplay() {
+        const cycle = phases[currentCycle];
+        phaseNameEl.textContent = cycle[currentPhase].name;
+        phaseDetailEl.innerHTML = cycle[currentPhase].detail;
+        btnBack.disabled = currentPhase === 0;
+        btnNext.disabled = currentPhase === cycle.length - 1;
+    }
+
+    function setCycle(cycle) {
+        currentCycle = cycle;
+        currentPhase = 0;
+        btnRegular.classList.toggle('active', cycle === 'regular');
+        btnEighth.classList.toggle('active', cycle === 'eighth');
+        updateDisplay();
+    }
+
+    btnRegular.addEventListener('click', () => setCycle('regular'));
+    btnEighth.addEventListener('click', () => setCycle('eighth'));
+
+    btnNext.addEventListener('click', () => {
+        const cycle = phases[currentCycle];
+        if (currentPhase < cycle.length - 1) {
+            currentPhase++;
+            updateDisplay();
+        }
+    });
+
+    btnBack.addEventListener('click', () => {
+        if (currentPhase > 0) {
+            currentPhase--;
+            updateDisplay();
+        }
+    });
+
+    setCycle('regular');
+</script>
+</body>
+</html>
